@@ -41,9 +41,9 @@ extern Spin_Lock_t kthreadLock;
  * copy it into kernel space.
  * Interrupts must be disabled.
  */
-/* "extern" to note that it's used by semaphore and networking system calls, defined 
+/* "extern" to note that it's used by semaphore and networking system calls, defined
    in another file */
-/* need not be called with interrupts disabled, since it should move data from 
+/* need not be called with interrupts disabled, since it should move data from
    user space (which is blocked in the kernel) into a newly-allocated buffer */
 extern int Copy_User_String(ulong_t uaddr, ulong_t len, ulong_t maxLen,
                             char **pStr) {
@@ -147,7 +147,7 @@ static int Sys_PrintString(struct Interrupt_State *state) {
         /* in reality, one wouldn't abort on this sort of thing.  but we do that
            just in case it helps track down a bug that much sooner */
         /* length is greater than zero, so someone thought there was a string here,
-           but the first character is null, so they were either wrong or something 
+           but the first character is null, so they were either wrong or something
            poor occurred. */
         if(!buf[0]) {
             Dump_Interrupt_State(state);
@@ -608,9 +608,9 @@ static int Sys_Delete(struct Interrupt_State *state) {
 /*
  * Rename a file.
  * Params:
- *   state->ebx - address of user string containing old path 
+ *   state->ebx - address of user string containing old path
  *   state->ecx - length of old path
- *   state->edx - address of user string containing new path 
+ *   state->edx - address of user string containing new path
  *   state->esix - length of new path
  *
  * Returns: 0 if successful, error code (< 0) if unsuccessful
@@ -623,9 +623,9 @@ static int Sys_Rename(struct Interrupt_State *state) {
 /*
  * Link a file.
  * Params:
- *   state->ebx - address of user string containing old path 
+ *   state->ebx - address of user string containing old path
  *   state->ecx - length of old path
- *   state->edx - address of user string containing new path 
+ *   state->edx - address of user string containing new path
  *   state->esix - length of new path
  *
  * Returns: 0 if successful, error code (< 0) if unsuccessful
@@ -638,9 +638,9 @@ static int Sys_Link(struct Interrupt_State *state) {
 /*
  * Link a file.
  * Params:
- *   state->ebx - address of user string containing old path 
+ *   state->ebx - address of user string containing old path
  *   state->ecx - length of old path
- *   state->edx - address of user string containing new path 
+ *   state->edx - address of user string containing new path
  *   state->esix - length of new path
  *
  * Returns: 0 if successful, error code (< 0) if unsuccessful
@@ -715,10 +715,13 @@ static int Sys_ReadEntry(struct Interrupt_State *state) {
 static int Sys_Write(struct Interrupt_State *state) {
     int bytes_written = 0;
     /* where is the file table? */
+    Print("write fd:%d\n", state->ebx);
     if(state->ebx > USER_MAX_FILES) {
         return EINVALID;
     }
+    Print("valid");
     if(CURRENT_THREAD->userContext->file_descriptor_table[state->ebx]) {
+      Print("test");
         Enable_Interrupts();
         void *data_buffer = Malloc(state->edx);
         if(!data_buffer) {
@@ -810,7 +813,7 @@ static int Sys_Sync(struct Interrupt_State *state) {
  * Params:
  *   state->ebx - address of user string containing device to format
  *   state->ecx - length of device name string
- *   state->edx - address of user string containing filesystem type 
+ *   state->edx - address of user string containing filesystem type
  *   state->esi - length of filesystem type string
 
  * Returns: 0 if successful, error code (< 0) if unsuccessful
@@ -899,15 +902,44 @@ static int Sys_PlaySoundFile(struct Interrupt_State *state) {
     return 0;
 }
 
-/* 
+/*
  * Create a pipe.
  * Params:
  *   state->ebx - address of file descriptor for the read side
  *   state->ecx - address of file descriptor for the write side
  */
 static int Sys_Pipe(struct Interrupt_State *state) {
-    TODO_P(PROJECT_PIPE, "Pipe system call");
-    return EUNSUPPORTED;
+    struct File *read_file = NULL, *write_file = NULL;
+    int write_fd = 0, read_fd = 0;
+    int rc = 0;
+    Enable_Interrupts();
+
+    read_fd = next_descriptor();
+    if (read_fd < 0) {
+        Disable_Interrupts();
+        return ENOMEM;
+    }
+    CURRENT_THREAD->userContext->file_descriptor_table[read_fd] = (struct File*)1;
+    if (Copy_To_User(state->ebx, &read_fd, sizeof(int))) {
+        Disable_Interrupts();
+        return EINVALID;
+    }
+
+    write_fd = next_descriptor();
+    if (write_fd < 0) {
+        Disable_Interrupts();
+        return ENOMEM;
+    }
+    if(Copy_To_User(state->ecx, &write_fd, sizeof(int))) {
+        Disable_Interrupts();
+        return EINVALID;
+    }
+
+    rc = Pipe_Create(&read_file, &write_file);
+    CURRENT_THREAD->userContext->file_descriptor_table[read_fd] = read_file;
+    CURRENT_THREAD->userContext->file_descriptor_table[write_fd] = write_file;
+    Disable_Interrupts();
+    return rc;
 }
 
 
@@ -917,7 +949,7 @@ static int Sys_Fork(struct Interrupt_State *state) {
     return EUNSUPPORTED;
 }
 
-/* 
+/*
  * Exec a new program in this process.
  * Params:
  *   state->ebx - user address of name of executable
@@ -931,8 +963,8 @@ static int Sys_Execl(struct Interrupt_State *state) {
     return EUNSUPPORTED;
 }
 
-/* 
- * The following is a crude trigger for dumping kernel 
+/*
+ * The following is a crude trigger for dumping kernel
  * statistics to the console output.  It is not generally
  * how one should output kernel statistics to user space.
  */
@@ -945,7 +977,7 @@ static int Sys_Diagnostic(struct Interrupt_State *state) {
     return 0;
 }
 
-/* 
+/*
  * Retrieve disk properties
  * Params:
  *   state->ebx - path name to mounted file system
@@ -969,7 +1001,7 @@ static int Sys_Disk_Properties(struct Interrupt_State *state) {
     return 0;
 }
 
-/* 
+/*
  * Set Resource Limits
  * Params:
  *   state->ebx - resource to limit
@@ -993,8 +1025,8 @@ static int Sys_Get_Affinity(struct Interrupt_State *state) {
  * Sys_Clone - create a new LWP, shares text and heap with parent
  *
  * Params:
- *   state->ebx - address of thread function to run 
- *   state->ecx - address of top of child's stack 
+ *   state->ebx - address of thread function to run
+ *   state->ecx - address of top of child's stack
  * Returns: pid for child on sucess or EINVALID for error
  */
 static int Sys_Clone(struct Interrupt_State *state) {

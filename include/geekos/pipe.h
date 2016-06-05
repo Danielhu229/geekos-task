@@ -15,6 +15,16 @@
 extern struct File_Ops Pipe_Read_Ops;
 extern struct File_Ops Pipe_Write_Ops;
 
+#define MAX_FIFO_FILE_SIZE 32768
+
+struct Pipe {
+    int readers;
+    int writers;
+    void *buffer;
+    ulong_t read_index;
+    ulong_t write_index;
+};
+
 int Pipe_Create(struct File **read_file, struct File **write_file);
 int Pipe_Read(struct File *f, void *buf, ulong_t numBytes);
 int Pipe_Write(struct File *f, void *buf, ulong_t numBytes);

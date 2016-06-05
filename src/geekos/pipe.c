@@ -23,19 +23,48 @@ struct File_Ops Pipe_Read_Ops =
 struct File_Ops Pipe_Write_Ops =
     { NULL, NULL, Pipe_Write, NULL, Pipe_Close, NULL };
 
+static ulong_t get_remain_memmory_size(struct Pipe* p) {
+    if (p->read_index > p->write_index) {
+        return (p->read_index - p->write_index);
+    } else {
+        return (MAX_FIFO_FILE_SIZE + p->read_index - p->write_index + 1);
+    }
+}
+
 int Pipe_Create(struct File **read_file, struct File **write_file) {
-    TODO_P(PROJECT_PIPE, "Create a pipe");
-    return EUNSUPPORTED;
+    struct Pipe* pipe = Malloc(sizeof (struct Pipe));
+    pipe->buffer = Malloc(MAX_FIFO_FILE_SIZE);
+    *read_file = Allocate_File(&Pipe_Read_Ops, 0, 0, (void*)pipe, 0, 0);
+    *write_file = Allocate_File(&Pipe_Write_Ops, 0, 0, (void*)pipe, 0, 0);
+    Print("Pipe_Create, write file:%p\n", *write_file);
+    return 0;
 }
 
 int Pipe_Read(struct File *f, void *buf, ulong_t numBytes) {
-    TODO_P(PROJECT_PIPE, "Pipe read");
+    // TODO_P(PROJECT_PIPE, "Pipe read");
+
     return EUNSUPPORTED;
 }
 
 int Pipe_Write(struct File *f, void *buf, ulong_t numBytes) {
-    TODO_P(PROJECT_PIPE, "Pipe write");
-    return EUNSUPPORTED;
+    // TODO_P(PROJECT_PIPE, "Pipe write");
+    Print("call pipe write\n");
+    struct Pipe* pipe = (struct Pipe*)(f->fsData);
+    ulong_t max = get_remain_memmory_size(pipe);
+    numBytes = numBytes > max ? max: numBytes;
+    ulong_t i;
+    char *dst = (char *)pipe->buffer;
+    char *src = (char *)buf;
+    for(i = 0; i < numBytes; ++i) {
+        dst[pipe->write_index] = src[i];
+        if (pipe->write_index == MAX_FIFO_FILE_SIZE) {
+            pipe->write_index = 0;
+        } else {
+            pipe->write_index++;
+        }
+    }
+    Print("write bytes:%lu\n", numBytes);
+    return numBytes;
 }
 
 int Pipe_Close(struct File *f) {
