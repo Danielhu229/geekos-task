@@ -25,30 +25,43 @@ struct File_Ops Pipe_Write_Ops =
 
 static ulong_t get_remain_memmory_size(struct Pipe* p) {
     if (p->read_index > p->write_index) {
-        return (p->read_index - p->write_index);
+        return (p->read_index - p->write_index + 1);
     } else {
-        return (MAX_FIFO_FILE_SIZE + p->read_index - p->write_index + 1);
+        return (MAX_FIFO_FILE_SIZE + p->read_index - p->write_index);
     }
 }
 
 int Pipe_Create(struct File **read_file, struct File **write_file) {
     struct Pipe* pipe = Malloc(sizeof (struct Pipe));
     pipe->buffer = Malloc(MAX_FIFO_FILE_SIZE);
+    pipe->write_index = pipe->read_index = 0;
+    pipe->writers = pipe->readers = 0;
     *read_file = Allocate_File(&Pipe_Read_Ops, 0, 0, (void*)pipe, 0, 0);
     *write_file = Allocate_File(&Pipe_Write_Ops, 0, 0, (void*)pipe, 0, 0);
-    Print("Pipe_Create, write file:%p\n", *write_file);
     return 0;
 }
 
 int Pipe_Read(struct File *f, void *buf, ulong_t numBytes) {
     // TODO_P(PROJECT_PIPE, "Pipe read");
-
-    return EUNSUPPORTED;
+    struct Pipe* pipe = (struct Pipe*)(f->fsData);
+    ulong_t max = MAX_FIFO_FILE_SIZE - get_remain_memmory_size(pipe);
+    numBytes = numBytes > max ? max : numBytes;
+    char *dst = (char *)buf;
+    char *src = (char *)pipe->buffer;
+    ulong_t i;
+    for(i = 0; i < numBytes; ++i) {
+        dst[i] = src[pipe->read_index];
+        if (pipe->read_index == MAX_FIFO_FILE_SIZE) {
+            pipe->read_index = 0;
+        } else {
+            pipe->read_index++;
+        }
+    }
+    return numBytes;
 }
 
 int Pipe_Write(struct File *f, void *buf, ulong_t numBytes) {
     // TODO_P(PROJECT_PIPE, "Pipe write");
-    Print("call pipe write\n");
     struct Pipe* pipe = (struct Pipe*)(f->fsData);
     ulong_t max = get_remain_memmory_size(pipe);
     numBytes = numBytes > max ? max: numBytes;
@@ -63,7 +76,6 @@ int Pipe_Write(struct File *f, void *buf, ulong_t numBytes) {
             pipe->write_index++;
         }
     }
-    Print("write bytes:%lu\n", numBytes);
     return numBytes;
 }
 

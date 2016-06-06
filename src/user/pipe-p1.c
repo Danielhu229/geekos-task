@@ -27,8 +27,6 @@ int main(int argc, char **argv) {
     pipe_retval = Pipe(&read_fd, &write_fd);
     assert(pipe_retval == 0);
 
-    Print("write_fd:%d\n", write_fd);
-
     for(i = 0; i < 5; i++) {
         written_bytes = Write(write_fd, "beep", 4);
         assert(written_bytes == 4);

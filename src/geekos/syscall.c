@@ -920,17 +920,16 @@ static int Sys_Pipe(struct Interrupt_State *state) {
         return ENOMEM;
     }
     CURRENT_THREAD->userContext->file_descriptor_table[read_fd] = (struct File*)1;
-    if (Copy_To_User(state->ebx, &read_fd, sizeof(int))) {
+    if (!Copy_To_User(state->ebx, &read_fd, sizeof(int))) {
         Disable_Interrupts();
         return EINVALID;
     }
-
     write_fd = next_descriptor();
     if (write_fd < 0) {
         Disable_Interrupts();
         return ENOMEM;
     }
-    if(Copy_To_User(state->ecx, &write_fd, sizeof(int))) {
+    if(!Copy_To_User(state->ecx, &write_fd, sizeof(int))) {
         Disable_Interrupts();
         return EINVALID;
     }
