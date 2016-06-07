@@ -46,6 +46,15 @@ int Pipe_Read(struct File *f, void *buf, ulong_t numBytes) {
     struct Pipe* pipe = (struct Pipe*)(f->fsData);
     ulong_t max = MAX_FIFO_FILE_SIZE - get_remain_memmory_size(pipe);
     numBytes = numBytes > max ? max : numBytes;
+    if (numBytes == 0) {
+        if (pipe->writers == 0) {
+            return 0;
+        }
+        else {
+            return EWOULDBLOCK;
+        }
+    }
+
     char *dst = (char *)buf;
     char *src = (char *)pipe->buffer;
     ulong_t i;
