@@ -35,7 +35,7 @@ int Pipe_Create(struct File **read_file, struct File **write_file) {
     struct Pipe* pipe = Malloc(sizeof (struct Pipe));
     pipe->buffer = Malloc(MAX_FIFO_FILE_SIZE);
     pipe->write_index = pipe->read_index = 0;
-    pipe->writers = pipe->readers = 0;
+    pipe->writers = pipe->readers = 1;
     *read_file = Allocate_File(&Pipe_Read_Ops, 0, 0, (void*)pipe, 0, 0);
     *write_file = Allocate_File(&Pipe_Write_Ops, 0, 0, (void*)pipe, 0, 0);
     return 0;
@@ -80,6 +80,23 @@ int Pipe_Write(struct File *f, void *buf, ulong_t numBytes) {
 }
 
 int Pipe_Close(struct File *f) {
-    TODO_P(PROJECT_PIPE, "Pipe close");
+    // TODO_P(PROJECT_PIPE, "Pipe close");
+    struct Pipe* pipe = (struct Pipe*)(f->fsData);
+    if (f->ops == &Pipe_Read_Ops) {
+        if (pipe->writers == 0) {
+            //pipe->reads--;
+        }
+        else {
+
+        }
+        pipe->readers--;
+    }
+    else if (f->ops == &Pipe_Write_Ops) {
+        pipe->writers--;
+    }
+    if (pipe->writers == 0 && pipe->readers == 0) {
+        Free(pipe->buffer);
+        Free(pipe);
+    }
     return 0;
 }

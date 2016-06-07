@@ -715,13 +715,10 @@ static int Sys_ReadEntry(struct Interrupt_State *state) {
 static int Sys_Write(struct Interrupt_State *state) {
     int bytes_written = 0;
     /* where is the file table? */
-    Print("write fd:%d\n", state->ebx);
     if(state->ebx > USER_MAX_FILES) {
         return EINVALID;
     }
-    Print("valid");
     if(CURRENT_THREAD->userContext->file_descriptor_table[state->ebx]) {
-      Print("test");
         Enable_Interrupts();
         void *data_buffer = Malloc(state->edx);
         if(!data_buffer) {
